@@ -14,16 +14,11 @@ class AlbumViewController: UIViewController {
     @IBOutlet weak var mapView: MKMapView!
     @IBOutlet weak var albumCollectionView: UICollectionView!
     
-    var shouldCollectionViewUpdate = false
+    var blockOperation = BlockOperation()
     
     let viewContext = DataController.shared.viewContext
     
     var pin: Pin!
-    
-    var deleteIndexPaths: [IndexPath] = []
-    var insertIndexPaths: [IndexPath] = []
-    var changedIndexPaths: [IndexPath] = []
-    var moveIndexPaths: [(old: IndexPath, new: IndexPath)] = []
     
     var fetchedResultsController: NSFetchedResultsController<Photo>!
     
@@ -138,47 +133,36 @@ extension AlbumViewController: UICollectionViewDelegate {
 // MARK: - NSFetchedResultsControllerDelegate
 extension AlbumViewController: NSFetchedResultsControllerDelegate {
     func controllerWillChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
-        shouldCollectionViewUpdate = false
+        blockOperation = BlockOperation()
     }
     func controller(_ controller: NSFetchedResultsController<NSFetchRequestResult>, didChange anObject: Any, at indexPath: IndexPath?, for type: NSFetchedResultsChangeType, newIndexPath: IndexPath?) {
         switch type {
         case .insert:
             print("inserted item")
-            insertIndexPaths.append(newIndexPath!)
-//            albumCollectionView.insertItems(at: [newIndexPath!])
+            blockOperation.addExecutionBlock {
+                self.albumCollectionView.insertItems(at: [newIndexPath!])
+            }
         case .delete:
             print("deleted item")
-            deleteIndexPaths.append(indexPath!)
-//            albumCollectionView.deleteItems(at: [indexPath!])
+            blockOperation.addExecutionBlock {
+                self.albumCollectionView.deleteItems(at: [indexPath!])
+            }
         case .update:
             print("updated item")
-            changedIndexPaths.append(indexPath!)
-//            albumCollectionView.reloadItems(at: [indexPath!])
+            blockOperation.addExecutionBlock {
+                self.albumCollectionView.reloadItems(at: [indexPath!])
+            }
         case .move:
             print("moved item")
-            moveIndexPaths.append((old: indexPath!, new: newIndexPath!))
-//            albumCollectionView.moveItem(at: indexPath!, to: newIndexPath!)
+            blockOperation.addExecutionBlock {
+                self.albumCollectionView.moveItem(at: indexPath!, to: newIndexPath!)
+            }
         }
-        
-        shouldCollectionViewUpdate = true
     }
     
     func controllerDidChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
-        guard shouldCollectionViewUpdate else {
-            return
-        }
         albumCollectionView.performBatchUpdates({
-            self.albumCollectionView.insertItems(at: self.insertIndexPaths)
-            self.albumCollectionView.deleteItems(at: self.deleteIndexPaths)
-            self.albumCollectionView.reloadItems(at: self.changedIndexPaths)
-            for item in self.moveIndexPaths {
-                self.albumCollectionView.moveItem(at: item.old, to: item.new)
-            }
-        }) { (success) in
-            self.insertIndexPaths = []
-            self.deleteIndexPaths = []
-            self.changedIndexPaths = []
-            self.moveIndexPaths = []
-        }
+            self.blockOperation.start()
+        })
     }
 }
