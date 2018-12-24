@@ -17,6 +17,12 @@ class MapViewController: UIViewController {
     
     let viewContext = DataController.shared.viewContext
     
+    let userDefaultsLongitudeKey = "MapViewVisibleArea.longitude"
+    let userDefaultsLatitudeKey = "MapViewVisibleArea.latitude"
+    let userDefaultsLatitudeSpanKey = "MapViewVisibleArea.span.lat"
+    let userDefaultsLongitudeSpanKey = "MapViewVisibleArea.span.lon"
+    let userDefaultsHasBeenLaunched = "HasLaunched"
+    
     let annotationViewReuseIdentifier = "pinAnnotationView"
     var fetchedResultsController: NSFetchedResultsController<Pin>!
     
@@ -25,8 +31,7 @@ class MapViewController: UIViewController {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         setupGestureRecognizer()
-        mapView.delegate = self
-        mapView.register(MKPinAnnotationView.self, forAnnotationViewWithReuseIdentifier: annotationViewReuseIdentifier)
+        prepareMapView()
         setupFetchedResultsController()
         navigationController?.setNavigationBarHidden(true, animated: false)
     }
@@ -36,6 +41,24 @@ class MapViewController: UIViewController {
     }
     
     // MARK: - Utility Methods
+    func prepareMapView() {
+        mapView.delegate = self
+        mapView.register(MKPinAnnotationView.self, forAnnotationViewWithReuseIdentifier: annotationViewReuseIdentifier)
+        if !UserDefaults.standard.bool(forKey: userDefaultsHasBeenLaunched) {
+            saveCurrentMapRegion()
+            UserDefaults.standard.set(true, forKey: userDefaultsHasBeenLaunched)
+            return
+        }
+        
+        let latitude = UserDefaults.standard.double(forKey: userDefaultsLatitudeKey)
+        let longitude = UserDefaults.standard.double(forKey: userDefaultsLongitudeKey)
+        let latSpan = UserDefaults.standard.double(forKey: userDefaultsLatitudeSpanKey)
+        let lonSpan = UserDefaults.standard.double(forKey: userDefaultsLongitudeSpanKey)
+        let region = MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: latitude, longitude: longitude), span: MKCoordinateSpan(latitudeDelta: latSpan, longitudeDelta: lonSpan))
+
+        mapView.setRegion(region, animated: false)
+    }
+    
     func setupFetchedResultsController() {
         let fetchRequest: NSFetchRequest<Pin> = Pin.fetchRequest()
         fetchRequest.sortDescriptors = [NSSortDescriptor(key: "latitude", ascending: true)]
@@ -79,6 +102,13 @@ class MapViewController: UIViewController {
         let annotation = PinAnnotation(pin: pin)
         mapView.addAnnotation(annotation)
     }
+    
+    func saveCurrentMapRegion() {
+        UserDefaults.standard.set(mapView.region.center.longitude, forKey: userDefaultsLongitudeKey)
+        UserDefaults.standard.set(mapView.region.center.latitude, forKey: userDefaultsLatitudeKey)
+        UserDefaults.standard.set(mapView.region.span.latitudeDelta, forKey: userDefaultsLatitudeSpanKey)
+        UserDefaults.standard.set(mapView.region.span.longitudeDelta, forKey: userDefaultsLongitudeSpanKey)
+    }
 }
 
 
@@ -91,7 +121,6 @@ extension MapViewController: MKMapViewDelegate {
         let fetchRequest: NSFetchRequest<Pin> = Pin.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "latitude == \(pin.latitude) AND longitude == \(pin.longitude)")
         // get up to date pin
-        try! viewContext.fetch(fetchRequest)
         if let fetchedPinOpt = try? viewContext.fetch(fetchRequest).first, let fetchedPin = fetchedPinOpt {
             selectedPin = fetchedPin
             performSegue(withIdentifier: "pinSelected", sender: self)
@@ -103,16 +132,19 @@ extension MapViewController: MKMapViewDelegate {
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
         let view: MKAnnotationView = mapView.dequeueReusableAnnotationView(withIdentifier: annotationViewReuseIdentifier, for: annotation)
         
-        view.isDraggable = true
-        
         return view
     }
     
-    func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, didChange newState: MKAnnotationView.DragState, fromOldState oldState: MKAnnotationView.DragState) {
-        if newState == .ending {
-            // perform any update
-        }
+    func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+        saveCurrentMapRegion()
     }
+
+    // Implement when things 
+//    func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, didChange newState: MKAnnotationView.DragState, fromOldState oldState: MKAnnotationView.DragState) {
+//        if newState == .ending {
+//            // perform any update
+//        }
+//    }
 }
 
 extension MapViewController: NSFetchedResultsControllerDelegate {
