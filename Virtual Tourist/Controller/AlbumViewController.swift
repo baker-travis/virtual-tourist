@@ -13,6 +13,8 @@ import CoreData
 class AlbumViewController: UIViewController {
     @IBOutlet weak var mapView: MKMapView!
     @IBOutlet weak var albumCollectionView: UICollectionView!
+    @IBOutlet weak var noImagesLabel: UILabel!
+    @IBOutlet weak var newCollectionButton: UIBarButtonItem!
     
     // This pattern inspired by and adapted from: https://gist.github.com/Sorix/987af88f82c95ff8c30b51b6a5620657
     var actionsToPerform: [() -> Void] = []
@@ -70,8 +72,11 @@ class AlbumViewController: UIViewController {
     // MARK: - IBActions
 
     @IBAction func newCollectionPressed(_ sender: Any) {
+        self.newCollectionButton.isEnabled = false
         pin.deleteAllImages {
-            self.pin.fetchAllImages()
+            self.pin.fetchAllImages(completion: {
+                self.newCollectionButton.isEnabled = true
+            })
         }
     }
     /*
@@ -102,6 +107,11 @@ extension AlbumViewController: UICollectionViewDataSource {
     }
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        if fetchedResultsController.fetchedObjects?.count == 0 {
+            noImagesLabel.isHidden = false
+        } else {
+            noImagesLabel.isHidden = true
+        }
         return fetchedResultsController.sections?[section].numberOfObjects ?? 0
     }
     
@@ -114,6 +124,10 @@ extension AlbumViewController: UICollectionViewDataSource {
             // This will set the cell's imageView as well
             cell.photo = image
         } else {
+            DataController.shared.persistentContainer.performBackgroundTask { (context) in
+                try? image.fetchImage()
+                try? context.save()
+            }
             cell.image.image = UIImage(imageLiteralResourceName: "Image Placeholder")
         }
         
@@ -162,22 +176,18 @@ extension AlbumViewController: NSFetchedResultsControllerDelegate {
     func controller(_ controller: NSFetchedResultsController<NSFetchRequestResult>, didChange anObject: Any, at indexPath: IndexPath?, for type: NSFetchedResultsChangeType, newIndexPath: IndexPath?) {
         switch type {
         case .insert:
-            print("inserted item")
             actionsToPerform.append {
                 self.albumCollectionView.insertItems(at: [newIndexPath!])
             }
         case .delete:
-            print("deleted item")
             actionsToPerform.append {
                 self.albumCollectionView.deleteItems(at: [indexPath!])
             }
         case .update:
-            print("updated item")
             actionsToPerform.append {
                 self.albumCollectionView.reloadItems(at: [indexPath!])
             }
         case .move:
-            print("moved item")
             actionsToPerform.append {
                 self.albumCollectionView.moveItem(at: indexPath!, to: newIndexPath!)
             }

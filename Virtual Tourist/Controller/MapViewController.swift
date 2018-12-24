@@ -95,7 +95,7 @@ class MapViewController: UIViewController {
             try? self.viewContext.save()
         }
         
-        pin.fetchAllImages()
+        pin.fetchAllImages(completion: nil)
     }
     
     func addAnnotation(pin: Pin) {

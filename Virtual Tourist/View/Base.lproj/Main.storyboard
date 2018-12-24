@@ -89,6 +89,12 @@
                                     </collectionViewCell>
                                 </cells>
                             </collectionView>
+                            <label hidden="YES" opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="No Images" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="cKW-Ah-cOc">
+                                <rect key="frame" x="16" y="284" width="382" height="20.333333333333314"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
                             <toolbar opaque="NO" clearsContextBeforeDrawing="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="6Ii-XS-t8t">
                                 <rect key="frame" x="0.0" y="692" width="414" height="44"/>
                                 <items>
@@ -106,20 +112,25 @@
                         <constraints>
                             <constraint firstItem="DI2-bM-ZNz" firstAttribute="leading" secondItem="oqS-oy-kuX" secondAttribute="leading" id="4P7-KM-kmE"/>
                             <constraint firstItem="DI2-bM-ZNz" firstAttribute="trailing" secondItem="oqS-oy-kuX" secondAttribute="trailing" id="6Rj-33-3cS"/>
+                            <constraint firstItem="cKW-Ah-cOc" firstAttribute="top" secondItem="Lc8-v7-Z1a" secondAttribute="bottom" constant="20" id="9tm-OW-tMm"/>
                             <constraint firstItem="6Ii-XS-t8t" firstAttribute="leading" secondItem="oqS-oy-kuX" secondAttribute="leading" id="Kdp-25-FLD"/>
                             <constraint firstItem="6Ii-XS-t8t" firstAttribute="top" secondItem="DI2-bM-ZNz" secondAttribute="bottom" id="QTP-DO-927"/>
+                            <constraint firstItem="cKW-Ah-cOc" firstAttribute="leading" secondItem="oqS-oy-kuX" secondAttribute="leading" constant="16" id="Ue5-dC-1KZ"/>
                             <constraint firstItem="6Ii-XS-t8t" firstAttribute="bottom" secondItem="oqS-oy-kuX" secondAttribute="bottom" id="Wqk-Nd-v5l"/>
                             <constraint firstItem="Lc8-v7-Z1a" firstAttribute="trailing" secondItem="oqS-oy-kuX" secondAttribute="trailing" id="YMr-KF-rgr"/>
                             <constraint firstItem="DI2-bM-ZNz" firstAttribute="top" secondItem="Lc8-v7-Z1a" secondAttribute="bottom" id="fOX-iO-Y3d"/>
                             <constraint firstItem="Lc8-v7-Z1a" firstAttribute="leading" secondItem="oqS-oy-kuX" secondAttribute="leading" id="hHe-AJ-b9I"/>
                             <constraint firstItem="Lc8-v7-Z1a" firstAttribute="top" secondItem="oqS-oy-kuX" secondAttribute="top" id="l5h-We-CpX"/>
                             <constraint firstItem="6Ii-XS-t8t" firstAttribute="trailing" secondItem="oqS-oy-kuX" secondAttribute="trailing" id="uJM-9E-U5l"/>
+                            <constraint firstItem="cKW-Ah-cOc" firstAttribute="trailing" secondItem="oqS-oy-kuX" secondAttribute="trailing" constant="-16" id="z8B-Ne-tJx"/>
                         </constraints>
                         <viewLayoutGuide key="safeArea" id="oqS-oy-kuX"/>
                     </view>
                     <connections>
                         <outlet property="albumCollectionView" destination="DI2-bM-ZNz" id="zX1-eW-Suv"/>
                         <outlet property="mapView" destination="Lc8-v7-Z1a" id="xSQ-O0-K30"/>
+                        <outlet property="newCollectionButton" destination="hc1-vh-o3V" id="oTm-f6-4MM"/>
+                        <outlet property="noImagesLabel" destination="cKW-Ah-cOc" id="J9e-ND-BXM"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="Z2N-5P-Cko" userLabel="First Responder" sceneMemberID="firstResponder"/>

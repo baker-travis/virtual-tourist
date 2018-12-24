@@ -57,16 +57,20 @@ extension Pin {
         })
     }
     
-    func fetchAllImages() {
+    func fetchAllImages(completion: (() -> Void)?) {
         DispatchQueue.global(qos: .userInitiated).async {
             self.getImages(completion: { (photos, error) in
                 if let error = error {
                     print(error)
+                    DispatchQueue.main.async {
+                        completion?()
+                    }
                     return
                 }
                 
-                for photoData in photos {
-                    DataController.shared.persistentContainer.performBackgroundTask({ (context) in
+                DataController.shared.persistentContainer.performBackgroundTask({ (context) in
+                    var savedPhotos: [Photo] = []
+                    for photoData in photos {
                         context.mergePolicy = NSMergePolicy.mergeByPropertyStoreTrump
                         let contextPin = context.object(with: self.objectID) as? Pin
                         
@@ -74,10 +78,17 @@ extension Pin {
                         photo.setImageData(photoData)
                         contextPin?.addToPhotos(photo)
                         try? context.save()
+                        savedPhotos.append(photo)
+                    }
+                    // Call completion handler here to perform actual fetching of image in the background.
+                    DispatchQueue.main.async {
+                        completion?()
+                    }
+                    savedPhotos.forEach({ (photo) in
                         try? photo.fetchImage()
                         try? context.save()
                     })
-                }
+                })
             })
         }
     }
