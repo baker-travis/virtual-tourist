@@ -14,7 +14,8 @@ class AlbumViewController: UIViewController {
     @IBOutlet weak var mapView: MKMapView!
     @IBOutlet weak var albumCollectionView: UICollectionView!
     
-    var blockOperation = BlockOperation()
+    // This pattern inspired by and adapted from: https://gist.github.com/Sorix/987af88f82c95ff8c30b51b6a5620657
+    var actionsToPerform: [() -> Void] = []
     
     let viewContext = DataController.shared.viewContext
     
@@ -50,8 +51,6 @@ class AlbumViewController: UIViewController {
         } catch {
             print(error)
         }
-        
-        albumCollectionView.reloadData()
     }
     
     // MARK: - UI Setup
@@ -71,7 +70,9 @@ class AlbumViewController: UIViewController {
     // MARK: - IBActions
 
     @IBAction func newCollectionPressed(_ sender: Any) {
-        pin.fetchAllImages()
+        pin.deleteAllImages {
+            self.pin.fetchAllImages()
+        }
     }
     /*
     // MARK: - Navigation
@@ -133,28 +134,51 @@ extension AlbumViewController: UICollectionViewDelegate {
 // MARK: - NSFetchedResultsControllerDelegate
 extension AlbumViewController: NSFetchedResultsControllerDelegate {
     func controllerWillChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
-        blockOperation = BlockOperation()
+        actionsToPerform = []
     }
+    
+    func controller(_ controller: NSFetchedResultsController<NSFetchRequestResult>, didChange sectionInfo: NSFetchedResultsSectionInfo, atSectionIndex sectionIndex: Int, for type: NSFetchedResultsChangeType) {
+        let sectionIndexSet = IndexSet(integer: sectionIndex)
+        
+        switch type {
+        case .insert:
+            actionsToPerform.append {
+                self.albumCollectionView.insertSections(sectionIndexSet)
+            }
+        case .delete:
+            actionsToPerform.append {
+                self.albumCollectionView.deleteSections(sectionIndexSet)
+            }
+        case .update:
+            actionsToPerform.append {
+                self.albumCollectionView.reloadSections(sectionIndexSet)
+            }
+        case .move:
+            assertionFailure()
+            break
+        }
+    }
+    
     func controller(_ controller: NSFetchedResultsController<NSFetchRequestResult>, didChange anObject: Any, at indexPath: IndexPath?, for type: NSFetchedResultsChangeType, newIndexPath: IndexPath?) {
         switch type {
         case .insert:
             print("inserted item")
-            blockOperation.addExecutionBlock {
+            actionsToPerform.append {
                 self.albumCollectionView.insertItems(at: [newIndexPath!])
             }
         case .delete:
             print("deleted item")
-            blockOperation.addExecutionBlock {
+            actionsToPerform.append {
                 self.albumCollectionView.deleteItems(at: [indexPath!])
             }
         case .update:
             print("updated item")
-            blockOperation.addExecutionBlock {
+            actionsToPerform.append {
                 self.albumCollectionView.reloadItems(at: [indexPath!])
             }
         case .move:
             print("moved item")
-            blockOperation.addExecutionBlock {
+            actionsToPerform.append {
                 self.albumCollectionView.moveItem(at: indexPath!, to: newIndexPath!)
             }
         }
@@ -162,7 +186,7 @@ extension AlbumViewController: NSFetchedResultsControllerDelegate {
     
     func controllerDidChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
         albumCollectionView.performBatchUpdates({
-            self.blockOperation.start()
+            self.actionsToPerform.forEach({ $0() })
         })
     }
 }
