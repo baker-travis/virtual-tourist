@@ -23,49 +23,44 @@ extension Pin {
     
     func getImages(completion: @escaping ([PhotoData], Error?) -> Void) {
         FlickerAPI.getPicturesByLatAndLong(latitude: self.latitude, longitude: self.longitude, page: Int(self.resultsNextPage)) { (photosData, error) in
-            print("api responded!")
             guard error == nil, let photosData = photosData else {
                 completion([], error!)
                 return
             }
             let nextPage = photosData.page == photosData.pages ? 1 : Int(photosData.page) + 1
-            print("next page should be: \(nextPage)")
-            print("current page is: \(photosData.page)")
-            print("Number of pages is: \(photosData.pages)")
             self.resultsNextPage = Int16(nextPage)
             try? self.managedObjectContext?.save()
             completion(photosData.photo, nil)
         }
     }
     
-    func deleteAllImages() {
+    func deleteAllImages(completion: @escaping () -> Void) {
         // if no photos, don't delete anything
         if self.photos?.count == 0 {
+            completion()
             return
         }
+
         DataController.shared.persistentContainer.performBackgroundTask({ (context) in
-            context.mergePolicy = NSMergePolicy.mergeByPropertyStoreTrump
-            let deleteRequest: NSFetchRequest<NSFetchRequestResult> = Photo.fetchRequest()
-            deleteRequest.predicate = NSPredicate(format: "pin == %@", context.object(with: self.objectID))
-            let batchDeleteRequest = NSBatchDeleteRequest(fetchRequest: deleteRequest)
-            batchDeleteRequest.resultType = .resultTypeObjectIDs
-            if let batchResult = try? context.execute(batchDeleteRequest) as? NSBatchDeleteResult, let deletedIds = batchResult?.result as? [NSManagedObjectID] {
-                if context.hasChanges {
-                    try? context.save()
-                    NSManagedObjectContext.mergeChanges(fromRemoteContextSave: [NSDeletedObjectsKey: deletedIds], into: [DataController.shared.viewContext])
-                }
+            if let photos = self.photos {
+                let copyOfPhotos = photos.copy() as! NSSet
+                copyOfPhotos.forEach({ (photo) in
+                    guard let photo = photo as? Photo else { return }
+                    
+                    context.delete(context.object(with: photo.objectID))
+//                    DataController.shared.viewContext.delete(photo)
+                })
+//                try? DataController.shared.viewContext.save()
+                try? context.save()
             }
+            completion()
         })
     }
     
     func fetchAllImages() {
-        deleteAllImages()
-        DispatchQueue.global(qos: .background).async {
+        DispatchQueue.global(qos: .userInitiated).async {
             self.getImages(completion: { (photos, error) in
-                print("got images")
                 if let error = error {
-                    // TODO: Show user some errror
-                    print("There was a problem")
                     print(error)
                     return
                 }
@@ -74,10 +69,8 @@ extension Pin {
                     DataController.shared.persistentContainer.performBackgroundTask({ (context) in
                         context.mergePolicy = NSMergePolicy.mergeByPropertyStoreTrump
                         let contextPin = context.object(with: self.objectID) as? Pin
-                        print(photoData.id)
                         
                         let photo = Photo(context: context)
-//                        photo.pin = contextPin
                         photo.setImageData(photoData)
                         contextPin?.addToPhotos(photo)
                         try? context.save()
